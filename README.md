@@ -1,6 +1,6 @@
 # LangChain4J JavaFX Documentation Chat demo application
 
-This application uses an existing JSON, based on the Azul documentation on [docs.azul.com](https://docs.azul.com), to do provide a chat JavaFX user interface.
+This application uses an existing JSON, based on the Azul documentation on [docs.azul.com](https://docs.azul.com), to provide a chat JavaFX user interface.
 
 ## Project Setup
 
