@@ -36,4 +36,5 @@ build/
 
 ###
 /*.log
+/openai_api_key.txt
 
