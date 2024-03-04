@@ -4,15 +4,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.model.StreamingResponseHandler;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.input.Prompt;
 import dev.langchain4j.model.input.PromptTemplate;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
@@ -54,18 +52,17 @@ public class DocsAnswerService {
         try {
             URL fileUrl = DocsAnswerService.class.getClassLoader().getResource("docs_index.json");
             if (fileUrl == null) {
-                action.appendAnswer("\nCould not find the JSON file");
-                action.setFinished();
+                action.appendAnswer("\nCould not find the JSON file", true);
                 return new ArrayList<>();
             }
             String json = Files.readString(Paths.get(fileUrl.toURI()));
             ObjectMapper objectMapper = new ObjectMapper();
             List<ContentSection> contentSections = objectMapper.readValue(json, new TypeReference<>() {
             });
-            appendAnswer(action, "\nLoaded number of JSON content sections: " + contentSections.size());
+            action.appendAnswer("\nLoaded number of JSON content sections: " + contentSections.size());
             return contentSections;
         } catch (Exception e) {
-            appendAnswer(action, "\nError while reading JSON data: " + e.getMessage(), true);
+            action.appendAnswer("\nError while reading JSON data: " + e.getMessage(), true);
         }
         return new ArrayList<>();
     }
@@ -79,17 +76,17 @@ public class DocsAnswerService {
             metadataMap.put("GROUP_ID", contentSection.groupId());
             textSegments.add(TextSegment.from(contentSection.content(), Metadata.from(metadataMap)));
         }
-        appendAnswer(action, "\nConverted to number of text segments: " + textSegments.size());
+        action.appendAnswer("\nConverted to number of text segments: " + textSegments.size());
 
         embeddingModel = new AllMiniLmL6V2EmbeddingModel();
         embeddingStore = new InMemoryEmbeddingStore<>();
-        appendAnswer(action, "\nEmbedding store is created: " + textSegments.size());
+        action.appendAnswer("\nEmbedding store is created: " + textSegments.size());
 
         List<Embedding> embeddings = embeddingModel.embedAll(textSegments).content();
-        appendAnswer(action, "\nNumber of embeddings: " + embeddings.size());
+        action.appendAnswer("\nNumber of embeddings: " + embeddings.size());
 
         embeddingStore.addAll(embeddings, textSegments);
-        appendAnswer(action, "\nEmbeddings are added to the store");
+        action.appendAnswer("\nEmbeddings are added to the store");
 
         chatModel = OpenAiStreamingChatModel.builder()
                 .apiKey(ApiKeys.OPENAI_API_KEY)
@@ -100,20 +97,7 @@ public class DocsAnswerService {
                 // gpt-3.5-turbo-1106
                 .modelName("gpt-4")
                 .build();
-        appendAnswer(action, "\nChat model is ready", true);
-    }
-
-    void appendAnswer(SearchAction action, String answer) {
-        appendAnswer(action, answer, false);
-    }
-
-    void appendAnswer(SearchAction action, String answer, boolean finished) {
-        Platform.runLater(() -> {
-            action.appendAnswer(answer);
-            if (finished) {
-                action.setFinished();
-            }
-        });
+        action.appendAnswer("\nChat model is ready", true);
     }
 
     void ask(SearchAction action) {
@@ -133,18 +117,27 @@ public class DocsAnswerService {
                 }));
 
         // Create a prompt for the model that includes question and relevant embeddings
-        PromptTemplate promptTemplate = PromptTemplate.from("""
-                 Answer the following question to the best of your ability:
-                    {{question}}
-                               
-                Base your answer on these relevant parts of the documentation:
-                    {{information}}
-                    
-                Do not provide any additional information.
-                Do not provide answers about other programming languages, but write "Sorry, that's a question I can't answer".
-                Do not generate source code, but write "Sorry, that's a question I can't answer".
-                If the answer cannot be found in the documents, write "Sorry, I could not find an answer to your question in our docs".
-                """);
+        PromptTemplate promptTemplate = PromptTemplate.from(relevantEmbeddings.isEmpty() ?
+                """
+                        The user asked the following question:
+                            {{question}}
+                                       
+                        Unfortunately our documentation doesn't seem to contain any content related to this question.
+                        Please reply in a polite way and ask the user to contact Azul support if they need more assistance.
+                        Tell the user to use the following link: https://www.azul.com/contact/
+                        """ :
+                """
+                        Answer the following question to the best of your ability:
+                            {{question}}
+                                       
+                        Base your answer on these relevant parts of the documentation:
+                            {{information}}
+                            
+                        Do not provide any additional information.
+                        Do not provide answers about other programming languages, but write "Sorry, that's a question I can't answer".
+                        Do not generate source code, but write "Sorry, that's a question I can't answer".
+                        If the answer cannot be found in the documents, write "Sorry, I could not find an answer to your question in our docs".
+                        """);
 
         String information = relevantEmbeddings.stream()
                 .map(match -> match.embedded().text()
@@ -158,29 +151,15 @@ public class DocsAnswerService {
 
         Prompt prompt = promptTemplate.apply(variables);
 
-        StreamingResponseHandler<AiMessage> streamingResponseHandler = new StreamingResponseHandler<>() {
-            @Override
-            public void onNext(String token) {
-                appendAnswer(action, token);
-            }
-
-            @Override
-            public void onComplete(Response<AiMessage> response) {
-                appendAnswer(action, "\n\nAnswer is complete for '" + action.getQuestion() + "', size: "
-                        + action.getAnswer().length(), true);
-            }
-
-            @Override
-            public void onError(Throwable error) {
-                LOGGER.error("Error while receiving answer: " + error.getMessage());
-                appendAnswer(action, "\n\nSomething went wrong: " + error.getMessage(), true);
-            }
-        };
-
         if (chatModel != null) {
-            chatModel.generate(prompt.toUserMessage().toString(), streamingResponseHandler);
+            chatModel.generate(prompt.toUserMessage().toString(), new MyStreamingResponseHandler(action));
         } else {
-            appendAnswer(action, "The chat model is not ready yet... Please try again later.", true);
+            action.appendAnswer("The chat model is not ready yet... Please try again later.", true);
         }
+    }
+
+    private interface Assistant {
+
+        TokenStream chat(String message);
     }
 }

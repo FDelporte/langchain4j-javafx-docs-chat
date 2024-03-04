@@ -1,5 +1,6 @@
 package be.webtechie.langchain4j.javafxdocschatdemo;
 
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -55,15 +56,20 @@ public class SearchAction {
         return answer;
     }
 
-    public void appendAnswer(String token) {
-        this.answer.set(this.answer.getValue() + token);
-    }
-
     public BooleanProperty getFinishedProperty() {
         return finished;
     }
 
-    public void setFinished() {
-        finished.set(true);
+    public void appendAnswer(String answer) {
+        appendAnswer(answer, false);
+    }
+
+    public void appendAnswer(String answer, boolean finished) {
+        Platform.runLater(() -> {
+            this.answer.set(this.answer.getValue() + answer);
+            if (finished) {
+                this.finished.set(true);
+            }
+        });
     }
 }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -16,7 +16,7 @@
         <!-- Dependencies -->
         <jackson.version>2.16.0</jackson.version>
         <javafx.version>21.0.1</javafx.version>
-        <langchain4j.version>0.24.0</langchain4j.version>
+        <langchain4j.version>0.27.1</langchain4j.version>
         <log4j.slf4j2.version>2.22.0</log4j.slf4j2.version>
     </properties>
 

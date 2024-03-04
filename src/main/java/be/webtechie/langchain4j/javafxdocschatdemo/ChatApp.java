@@ -16,8 +16,8 @@ public class ChatApp extends Application {
 
     private static final Logger LOGGER = LogManager.getLogger(ChatApp.class);
 
-    private static final double WIDTH = 1500;
-    private static final double HEIGHT = 800;
+    private static final double WIDTH = 1600;
+    private static final double HEIGHT = 1200;
     private static final ObservableList<SearchAction> data = FXCollections.observableArrayList();
     private static final DocsAnswerService docsAnswerService = new DocsAnswerService();
     private final TableView<SearchAction> table = new TableView<>();
@@ -32,18 +32,20 @@ public class ChatApp extends Application {
         holder.setStyle("-fx-padding: 15px;");
 
         Label label = new Label("What is your question?");
-        label.setStyle("-fx-font-size: 25px");
-        label.setStyle("-fx-font-weight: bold");
+        label.setStyle("-fx-font-size: 25px;");
 
         TextField input = new TextField();
         input.setOnAction(e -> doSearch(input.getText()));
         input.setMinWidth(500);
+        input.setStyle("-fx-font-size: 16px");
 
         Button search = new Button("Search");
         search.setOnAction(e -> doSearch(input.getText()));
+        search.setStyle("-fx-font-size: 16px");
 
         var inputHolder = new HBox(input, search);
         inputHolder.setStyle("-fx-padding: 0 0 25px 0");
+        inputHolder.setSpacing(10);
 
         TableColumn<SearchAction, String> timestamp = new TableColumn<>("Timestamp");
         timestamp.setCellValueFactory(cellData -> cellData.getValue().getTimestampProperty());
@@ -61,14 +63,25 @@ public class ChatApp extends Application {
         table.getColumns().addAll(timestamp, question, answer, finished);
         table.setItems(data);
         table.setStyle("-fx-padding: 0 25px 0 0");
+        table.setPrefHeight(HEIGHT);
+        table.setMinWidth(900);
 
         relatedLinks.setWrapText(true);
-        relatedLinks.setPrefHeight(130);
+        relatedLinks.setMinHeight(150);
+        relatedLinks.setStyle("-fx-font-size: 12px");
+
         lastAnswer.setWrapText(true);
-        lastAnswer.setPrefHeight(230);
+        lastAnswer.setPrefHeight(HEIGHT);
+        lastAnswer.setStyle("-fx-font-size: 16px");
+
+        var labelLinks = new Label("Related links");
+        labelLinks.setStyle("-fx-font-size: 25px");
+
+        var labelAnswer = new Label("Answer");
+        labelAnswer.setStyle("-fx-font-size: 25px");
 
         holder.getChildren().addAll(label, inputHolder,
-                new HBox(table, new VBox(new Label("Related links"), relatedLinks, new Label("Answer"), lastAnswer)));
+                new HBox(table, new VBox(labelLinks, relatedLinks, labelAnswer, lastAnswer)));
 
         Scene scene = new Scene(holder, WIDTH, HEIGHT);
 
