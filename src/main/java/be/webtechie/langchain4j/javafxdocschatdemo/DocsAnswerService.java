@@ -10,7 +10,6 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.input.Prompt;
 import dev.langchain4j.model.input.PromptTemplate;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
@@ -152,14 +151,9 @@ public class DocsAnswerService {
         Prompt prompt = promptTemplate.apply(variables);
 
         if (chatModel != null) {
-            chatModel.generate(prompt.toUserMessage().toString(), new MyStreamingResponseHandler(action));
+            chatModel.generate(prompt.toUserMessage().toString(), new CustomStreamingResponseHandler(action));
         } else {
             action.appendAnswer("The chat model is not ready yet... Please try again later.", true);
         }
-    }
-
-    private interface Assistant {
-
-        TokenStream chat(String message);
     }
 }

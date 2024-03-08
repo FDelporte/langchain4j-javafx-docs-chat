@@ -6,12 +6,12 @@ import dev.langchain4j.model.output.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class MyStreamingResponseHandler implements StreamingResponseHandler<AiMessage> {
-    private static final Logger LOGGER = LogManager.getLogger(MyStreamingResponseHandler.class);
+public class CustomStreamingResponseHandler implements StreamingResponseHandler<AiMessage> {
+    private static final Logger LOGGER = LogManager.getLogger(CustomStreamingResponseHandler.class);
 
     private final SearchAction action;
 
-    public MyStreamingResponseHandler(SearchAction action) {
+    public CustomStreamingResponseHandler(SearchAction action) {
         this.action = action;
     }
 
